@@ -5,6 +5,8 @@
 #include "ida_defines.h"
 #include "extension.h"
 #include "utils.h"
+#include "player_hooks.h"
+#include "offsets.h"
 
 /*
 ida pseudocode typedef said:
@@ -27,21 +29,18 @@ but in CServerGameClients::ProcessUsercmds decomp it gets called as:
       (unsigned int)dropped_packets,
       paused);
 */
-MAKE_VFTABLE_HOOK(
+DEFINE_VFTABLE_HOOK(
     ProcessUsercmds,
     void,
     void* thisptr, CUserCmd* cmd, int numcmds, int totalcmds, int dropped_packets, bool paused
 ) {
-    // codex start
-    print_ext("HIT ProcessUsercmds this=%p cmds=%p numcmds=%d totalcmds=%d dropped=%d paused=%d original=%p\n",
-        thisptr, cmd, numcmds, totalcmds, dropped_packets, paused, (void*)original);
+    // last solution didn't assign original as hook structure was different
+    // originals for players are now stored under PlayerHookManager, so get original from there and call it if exists
+    // could later name it to a general hook manager and store via string keys
+    auto original = g_PlayerHookManager.GetOriginal< def >( CBasePlayer_ProcessUsercmds_index );
 
-    // original is asked from the namespace, our original is stored in player vft
-    if (original)
-        original(thisptr, cmd, numcmds, totalcmds, dropped_packets, paused);
-    // codex end
-
-    // original( thisptr, cmd, numcmds, totalcmds, dropped_packets, paused );
+    if ( original )
+        original( thisptr, cmd, numcmds, totalcmds, dropped_packets, paused );
 
     g_HookHelper.OnProcessUsercmds_Post( thisptr, cmd, numcmds, totalcmds, dropped_packets, paused );
 };

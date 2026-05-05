@@ -6,33 +6,17 @@
 
 // from own project: https://github.com/11x1/half-life-2-console-painter/blob/internal-dll/src/hooks/hooks.hh
 // apparently linux has no calltypes...?
-#define MAKE_VFTABLE_HOOK( hook_name, return_type, ... ) \
-namespace all_hooks { \
+// modified heavily, as now a global player hook manager manages hooking & unhooking
+// macro is only used for defining 
+#define DEFINE_VFTABLE_HOOK( hook_name, return_type, ... ) \
+namespace VFuncHooks { \
     namespace hook_name { \
-        VirtualMethodHook* vm_hook = nullptr; \
         using def = return_type (  * )( __VA_ARGS__ ); \
         inline def original { nullptr };\
         return_type hook( __VA_ARGS__ );\
     } \
 } \
-return_type all_hooks::hook_name::hook( __VA_ARGS__ )
-
-#define INITIALIZE_VFTABLE_HOOK( hook_name, vtbl, idx ) { \
-    { \
-        print_ext( "initializing hook \"%s\" at vtbl=%p\n", #hook_name, (void*)( vtbl ) ); \
-        all_hooks::hook_name::vm_hook = new VirtualMethodHook( vtbl, idx ); \
-        print_ext( "\torig_func(#%d)=%p\n", idx, (void*)all_hooks::hook_name::vm_hook->original( ) ); \
-        all_hooks::hook_name::vm_hook->Hook( reinterpret_cast<uintptr_t>( all_hooks::hook_name::hook ) ); \
-    } \
-}
-
-#define UNINITIALIZE_VFTABLE_HOOK( hook_name ) { \
-    { \
-        print_ext( "uninitializing hook \"%s\"\n", #hook_name ); \
-        all_hooks::hook_name::vm_hook->Unhook( ); \
-        delete all_hooks::hook_name::vm_hook; \
-    } \
-}
+return_type VFuncHooks::hook_name::hook( __VA_ARGS__ )
 
 
 // codex start
@@ -65,42 +49,20 @@ static bool MakeReadOnly(void *addr)
 }
 // codex end
 
-class VirtualMethodHook {
-private:
-    uintptr_t* m_vtbl;
-    int m_index;
-    uintptr_t m_original;
+namespace VirtualMethodHelper {
+    static uintptr_t Hook( uintptr_t* vtbl, int index, uintptr_t func ) {
+        void* slot = &vtbl[ index ];
+        auto original_fn = vtbl[ index ];
 
-public:
-    VirtualMethodHook( uintptr_t vtbl, int index )
-        : m_vtbl( reinterpret_cast<uintptr_t*>( vtbl ) )
-        , m_index( index )
-        // , m_original( m_vtbl[ index ] )
         // codex start
-        , m_original( 0 )
-        // codex end
-    {
-        // codex start
-        print_ext("VirtualMethodHook ctor vtbl=%p index=%d slot=%p",
-        reinterpret_cast<void *>(vtbl),
-        index,
-        reinterpret_cast<void *>(&m_vtbl[index]));
-
-        m_original = m_vtbl[index];
-
-        print_ext("VirtualMethodHook original=%p", reinterpret_cast<void *>(m_original));
-        // codex end
-    }
-
-    void Hook( uintptr_t func ) {
-        // codex start
-        void* slot = &m_vtbl[ m_index ];
-        print_ext( "Hooking slot #%d at %p (original=%p) with %p\n", m_index, slot, (void*)m_original, (void*)func );
+        print_ext( "Hooking slot #%d at %p (original=%p) with %p\n", index, slot, (void*)original_fn, (void*)func );
         if ( !MakeWritable( slot ) ) {
             print_ext( "Failed to make slot writable, aborting hook\n" );
-            return;
+            return 0;
         }
-        m_vtbl[ m_index ] = func;
+
+        vtbl[ index ] = func;
+
         if ( !MakeReadOnly( slot ) ) {
             print_ext( "Failed to make slot read-only after hooking\n" );
         }
@@ -109,17 +71,20 @@ public:
         // mprotect( &m_vtbl[ m_index ], sizeof( uintptr_t ), PROT_READ | PROT_WRITE );
         // m_vtbl[ m_index ] = func;
         // mprotect( &m_vtbl[ m_index ], sizeof( uintptr_t ), PROT_READ );
+        return original_fn;
     }
 
-    void Unhook( ) {
+    void Unhook( uintptr_t* vtbl, int index, uintptr_t original ) {
         // codex start
-        void* slot = &m_vtbl[ m_index ];
-        print_ext( "Unhooking slot #%d at %p, restoring original %p\n", m_index, slot, (void*)m_original );
+        void* slot = &vtbl[ index ];
+        print_ext( "Unhooking slot #%d at %p, restoring original %p\n", index, slot, (void*)original );
         if ( !MakeWritable( slot ) ) {
             print_ext( "Failed to make slot writable, aborting unhook\n" );
             return;
         }
-        m_vtbl[ m_index ] = m_original;
+        
+        vtbl[ index ] = original;
+
         if ( !MakeReadOnly( slot ) ) {
             print_ext( "Failed to make slot read-only after unhooking\n" );
         }
@@ -130,7 +95,7 @@ public:
         // mprotect( &m_vtbl[ m_index ], sizeof( uintptr_t ), PROT_READ );
     }
 
-    uintptr_t original() const {
-        return m_original;
+    uintptr_t GetVtblMethodAddress( uintptr_t* vtbl, int index ) {
+        return vtbl[ index ];
     }
 };

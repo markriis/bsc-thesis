@@ -15,15 +15,16 @@ void HookClient( int client ) {
     // leave bots alone
     if ( !gamePlayer || gamePlayer->IsFakeClient( ) ) return;
 
+    // uhh is this actually needed
     if ( !gamePlayer->IsConnected( ) || !gamePlayer->IsInGame( ) ) {
-        print_ext( "client %d not connected, skipping hook\n", client );
+        print_ext_scoped( "client %d not connected, skipping hook\n", client );
         return;
     }
 
     edict_t* pPlayerEdict = gamePlayer ? gamePlayer->GetEdict() : nullptr;
 
     if ( !pPlayerEdict ) {
-        print_ext( "failed to get edict for client %d\n", client );
+        print_ext_scoped( "failed to get edict for client %d\n", client );
         return;
     }
 
@@ -31,46 +32,63 @@ void HookClient( int client ) {
     uintptr_t player = (uintptr_t)GameFunctions::GetContainingEntity( pPlayerEdict );
 
     if ( !player ) {
-        print_ext( "failed to get player base ptr for client %d\n", client );
+        print_ext_scoped( "failed to get player base ptr for client %d\n", client );
         return;
     }
 
-    print_ext( "got player base ptr %p for client %d\n", (void*)player, client );
+    print_ext_scoped( "got player base ptr %p for client %d\n", (void*)player, client );
 
     // switch ProcessUsercmds to our hook
-    g_PlayerHookManager.HookPlayer( client, player, CBasePlayer_ProcessUsercmds_index, (uintptr_t)all_hooks::ProcessUsercmds::hook );
+    g_PlayerHookManager.HookPlayer( client, player, CBasePlayer_ProcessUsercmds_index, (uintptr_t)VFuncHooks::ProcessUsercmds::hook );
 }
 
+// todo: could be cleaned up as function above needs playebase aswell
 void UnhookClient( int client ) {
     IGamePlayer* gamePlayer = playerhelpers->GetGamePlayer( client );
     
     // leave bots alone
+    // lol bots arent fake clients
     if ( !gamePlayer || gamePlayer->IsFakeClient( ) ) return;
 
-    g_PlayerHookManager.UnhookPlayer( client );
+    edict_t* pPlayerEdict = gamePlayer ? gamePlayer->GetEdict() : nullptr;
+
+    if ( !pPlayerEdict ) {
+        print_ext_scoped( "failed to get edict for client %d\n", client );
+        return;
+    }
+
+    // get player base ptr
+    uintptr_t player = (uintptr_t)GameFunctions::GetContainingEntity( pPlayerEdict );
+
+    if ( !player ) {
+        print_ext_scoped( "failed to get player base ptr for client %d\n", client );
+        return;
+    }
+
+    g_PlayerHookManager.UnhookPlayerAll( client, player );
 }
 
 void CHookHelper::SDK_OnAllLoaded( ) {
     // VirtualMethodHook hook( 0, 0 );
-    print_ext( "SDK_OnAllLoaded called, forward created\n" );
+    print_ext_scoped( "SDK_OnAllLoaded called, forward created\n" );
 
     auto server_base = ModuleHelper::FindModuleBase( "server_srv.so" );
 
     if ( !server_base ) {
-        print_ext( "failed to find server base\n" );
+        print_ext_scoped( "failed to find server base\n" );
         return;
     }
 
-    print_ext( "found server base at %p\n", (void*)server_base );
+    print_ext_scoped( "found server base at %p\n", (void*)server_base );
 
     GameFunctions::GetContainingEntity = ( GameFunctions::GetContainingEntity_t )( server_base + GetContainingEntity_offset );
-    // GameInterfaces::g_pGlobals = ( CGlobalVars* )( server_base + CGlobalVars_offset );
+    GameInterfaces::g_pGlobals = *( CGlobalVars** )( server_base + CGlobalVars_offset );
 
-    print_ext( "GetContainingEntity at %p\n", (void*)GameFunctions::GetContainingEntity );
+    print_ext_scoped( "game specific offsets initialized\n" );
+    print_ext_scoped( "\t GetContainingEntity: %p\n", (void*)GameFunctions::GetContainingEntity );
+    print_ext_scoped( "\t CGlobalVars: %p\n", (void*)GameInterfaces::g_pGlobals );
 
     playerhelpers->AddClientListener( this );
-
-    print_ext( "added client listener\n" );
 
     // hook every player in server already
     if ( playerhelpers->IsServerActivated( ) ) {
@@ -93,29 +111,28 @@ void CHookHelper::SDK_OnUnload( ) {
     // unregister client listener
     playerhelpers->RemoveClientListener( this );
 
-    print_ext( "SDK_OnUnload called, hooks released\n" );
+    print_ext_scoped( "hooks released\n" );
 }
 
 bool CHookHelper::SDK_OnLoad( char* error, size_t maxlen, bool late ) {
-    print_ext( "SDK_OnLoad called, extension loaded\n" );
+    print_ext_scoped( "extension loaded\n" );
     return true;
 }
 
 void CHookHelper::OnClientPutInServer( int client ) {
-    print_ext( "client %d put in server\n", client );
+    print_ext_scoped( "client %d put in server\n", client );
 
     HookClient( client );
 }
 
 void CHookHelper::OnClientDisconnected( int client ) {
-    print_ext( "client %d disconnected\n", client );
+    print_ext_scoped( "client %d disconnected\n", client );
 
     UnhookClient( client );
 }
 
 void CHookHelper::OnProcessUsercmds_Post( void* plr, CUserCmd* cmd, int numcmds, int totalcmds, int dropped_packets, bool paused ) {
-    print_ext( "OnProcessUsercmds_Post called for player %p\n", plr );
-    print_ext(
+    print_ext_scoped(
         "OnProcessUsercmds_Post | numcmds=%d, totalcmds=%d, dropped_packets=%d, paused=%d cmdnum=%d\n",
         numcmds, totalcmds, dropped_packets, paused, cmd->command_number
     );

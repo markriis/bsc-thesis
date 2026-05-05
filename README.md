@@ -18,18 +18,23 @@ bachelors-thesis/
         AMBuilder
         configure.py                        -> configure script bundled with example extension
                                                to define dependency paths
-      mitigation/
-        SourceMod C++ mitigation extension source
-        AMBuildScript
-        AMBuilder
-        configure.py
-
 
       plugin/
         thesis-<exploit-name>-validator.sp  -> loading extension
         include/
           <exploit-name>_validation.inc     -> compile-time metadata for sourcepawn
                                               (defining a dependency for the plugin)
+    mitigation/
+      extension/
+        SourceMod C++ mitigation extension source
+        AMBuildScript
+        AMBuilder
+        configure.py
+
+      plugin/
+        thesis-<exploit-name>-mitigation.sp
+        include/
+          <exploit-name>_validation.inc
 
 ```
 

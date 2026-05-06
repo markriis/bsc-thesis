@@ -54,12 +54,14 @@ weirdly enough, StartLagCompensation is the first func in the vft???
 #include "player_hooks.h"
 #include "offsets.h"
 #include "game_interfaces.h"
+#include "extension.h"
 
 #include <map>
 #include <cmath>
 
 #define MAX_TICKCOUNT_DELTA 4
 
+using CBasePlayer__IsBot_t = bool(*)(uintptr_t);
 
 // todo: nb_stop 0 made it get called 247
 // bot_mirror / bot_mimic
@@ -68,10 +70,13 @@ DEFINE_VFTABLE_HOOK(
     void,
     uintptr_t thisptr, uintptr_t plr, CUserCmd* cmd
 ) {
-    // * is the player trying to attack?
-    bool attacking = ( cmd->buttons & IN_ATTACK ) != 0;
-    // todo: do we need this check now
-    if ( attacking ) {
+    // from void __fastcall CPlayerInfo::SetAbsAngles(CPlayerInfo *this, QAngle *ang)
+    // v4 = *(__int64 (__fastcall **)(CBasePlayer *__hidden))(*(_QWORD *)m_pParent + 3648LL);
+    // v4 -> CBasePlayer::IsBot
+    CBasePlayer__IsBot_t CBasePlayer__IsBot = (CBasePlayer__IsBot_t)(*(uintptr_t*)(*(uintptr_t*)plr + 3648));
+
+    // * is the player a human
+    if( !CBasePlayer__IsBot( plr ) ) {
         // * copied straight from ida
         /*
         ~ *((_BYTE *)this + 88948) = 1;
@@ -86,24 +91,41 @@ DEFINE_VFTABLE_HOOK(
         ~     correct = 0.0;
         interval_per_tick = gpGlobals->interval_per_tick__0x1C;
         */
+       
         int32_t plr_index = 0;
         auto v10 = *reinterpret_cast< uintptr_t* >( thisptr + 8 );
         if ( v10 )
             // movsx   esi, word ptr [rax+6]
-            plr_index = *reinterpret_cast< int16_t* >( v10 + 6 );
+            // not quite sure if this is the correct way to do it...
+            plr_index = *reinterpret_cast< int16_t* >( v10 + 6 ) + 1;
+        
         
         auto nci = (CNetChannel*)GameInterfaces::g_pEngineServer->vft->GetPlayerNetInfo(GameInterfaces::g_pEngineServer, plr_index);
-        
-        if (nci) {
+
+        bool found_nci_test = false;
+        for ( int i = 0; i < 100; i++ ) {
+            auto nci_test = (CNetChannel*)GameInterfaces::g_pEngineServer->vft->GetPlayerNetInfo(GameInterfaces::g_pEngineServer, i);
+            if ( nci_test ) {
+                found_nci_test = true;
+                print_ext_scoped( "got net channel info for player index %d\n", i );
+                break;
+            }
+        }
+
+        if ( !found_nci_test ) {
+            print_ext_scoped( "failed to get any netchannelinfos 0..99\n" );
+        }
+
+        if ( nci ) {
             float plr_latency = nci->vft->GetLatency((INetChannelInfo *)nci, FLOW_OUTGOING);
 
             int32_t plr_latency_ticks = TIME_TO_TICKS( plr_latency );
-            int32_t estimated_tickcount = cmd->tick_count - plr_latency_ticks;
+            int32_t estimated_tickcount = GameInterfaces::g_pGlobals->tickcount - plr_latency_ticks;
 
             // * std::abs was yelling at me
-            int32_t diff = plr_latency_ticks > cmd->tick_count
-                    ? plr_latency_ticks - cmd->tick_count
-                    : cmd->tick_count - plr_latency_ticks;
+            int32_t diff = estimated_tickcount > cmd->tick_count
+                    ? estimated_tickcount - cmd->tick_count
+                    : cmd->tick_count - estimated_tickcount;
 
             if ( diff > MAX_TICKCOUNT_DELTA ) {
                 int latency_ms = static_cast<int>(plr_latency * 1000);
@@ -111,11 +133,20 @@ DEFINE_VFTABLE_HOOK(
                 cmd->tick_count = estimated_tickcount;
             }
         } else {
-            print_ext_scoped( "client %d has no net channel info, cannot correct tickcount\n", plr_index );
+            // todo: fix getting ping, something is broken with getting player netinfo
+            int32_t diff = cmd->tick_count > GameInterfaces::g_pGlobals->tickcount
+                    ? cmd->tick_count - GameInterfaces::g_pGlobals->tickcount
+                    : GameInterfaces::g_pGlobals->tickcount - cmd->tick_count;
+            
+            if ( diff > MAX_TICKCOUNT_DELTA ) {
+                print_ext_scoped( "heavy fallback, client %d cmd tickcount %d is too far from server tickcount %d, correcting\n", plr_index, cmd->tick_count, GameInterfaces::g_pGlobals->tickcount );
+                cmd->tick_count = GameInterfaces::g_pGlobals->tickcount;
+            } else {
+                print_ext_scoped( "client %d has no net channel info, but cmd tickcount %d is close to server tickcount %d, not correcting\n", plr_index, cmd->tick_count, GameInterfaces::g_pGlobals->tickcount );
+            }
         }
-        
-        
     }
+     
 
     if ( original )
         original( thisptr, plr, cmd );

@@ -83,13 +83,14 @@ void CHookHelper::SDK_OnAllLoaded( ) {
     print_ext_scoped( "found server base at %p\n", (void*)server_base );
 
     GameFunctions::GetContainingEntity = ( GameFunctions::GetContainingEntity_t )( server_base + GetContainingEntity_offset );
+    GameFunctions::UTIL_GetPlayerConnectionInfo = ( GameFunctions::UTIL_GetPlayerConnectionInfo_t )( server_base + UTIL_GetPlayerConnectionInfo_offset );
     GameInterfaces::g_pGlobals = *( CGlobalVars** )( server_base + CGlobalVars_offset );
     GameInterfaces::g_pEngineServer = *( CEngineServer** )( server_base + CEngineServer_offset );
-    // todo: maybe double deref, changed before i went to coffee
     GameInterfaces::g_pLagCompensationManager = *( CLagCompensationManager** )( server_base + CLagCompensationManager_offset );
 
     print_ext_scoped( "game specific offsets initialized\n" );
     print_ext_scoped( "\t GetContainingEntity: %p\n", (void*)GameFunctions::GetContainingEntity );
+    print_ext_scoped( "\t UTIL_GetPlayerConnectionInfo: %p\n", (void*)GameFunctions::UTIL_GetPlayerConnectionInfo );
     print_ext_scoped( "\t CGlobalVars: %p\n", (void*)GameInterfaces::g_pGlobals );
     print_ext_scoped( "\t CEngineServer: %p\n", (void*)GameInterfaces::g_pEngineServer );
     print_ext_scoped( "\t CLagCompensationManager: %p\n", (void*)GameInterfaces::g_pLagCompensationManager );
@@ -116,6 +117,8 @@ void CHookHelper::SDK_OnAllLoaded( ) {
     print_ext_scoped( "hooks initialized\n" );
 }
 
+// todo: well something goes wrong here, upon unloading the extension
+// *     core gets dumped, #uncool
 void CHookHelper::SDK_OnUnload( ) {
     // unhook clients
     for ( int i = 1; i <= playerhelpers->GetMaxClients( ); i++ ) {
@@ -127,6 +130,7 @@ void CHookHelper::SDK_OnUnload( ) {
 
     // unregister client listener
     playerhelpers->RemoveClientListener( this );
+    VirtualMethodHelper::Unhook( *(uintptr_t**)GameInterfaces::g_pLagCompensationManager, 0, (uintptr_t)VFuncHooks::CLagCompensationManager__StartLagCompensation::original );
 
     print_ext_scoped( "hooks released\n" );
 }

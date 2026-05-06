@@ -2,8 +2,6 @@
 
 #include "hook.h"
 #include "sdk_defines.h"
-#include "ida_defines.h"
-#include "extension.h"
 #include "utils.h"
 #include "player_hooks.h"
 #include "offsets.h"
@@ -29,6 +27,7 @@ but in CServerGameClients::ProcessUsercmds decomp it gets called as:
       (unsigned int)dropped_packets,
       paused);
 */
+
 DEFINE_VFTABLE_HOOK(
     ProcessUsercmds,
     void,
@@ -42,5 +41,9 @@ DEFINE_VFTABLE_HOOK(
     if ( original )
         original( thisptr, cmd, numcmds, totalcmds, dropped_packets, paused );
 
-    g_HookHelper.OnProcessUsercmds_Post( thisptr, cmd, numcmds, totalcmds, dropped_packets, paused );
+
+    print_ext_scoped(
+        "OnProcessUsercmds_Post | numcmds=%d, totalcmds=%d, dropped_packets=%d, paused=%d cmdnum=%d\n",
+        numcmds, totalcmds, dropped_packets, paused, cmd->command_number
+    );
 };

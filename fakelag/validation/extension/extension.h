@@ -47,9 +47,6 @@ void HookClient( int client );
 // IClientListener -> interface for client connection events, used to hook player class methods
 class CHookHelper : public SDKExtension, public IClientListener
 {
-// plugin defined helpers
-public:
-	void OnProcessUsercmds_Post( void *thisptr, CUserCmd* cmd, int numcmds, int totalcmds, int dropped_packets, bool paused );
 public:
 	// called after the initial loading sequence has been processed, true -> load successfully
 	bool SDK_OnLoad(char *error, size_t maxlen, bool late) override;

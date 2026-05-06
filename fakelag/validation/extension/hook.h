@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <cstddef>
 #include <sys/mman.h>
+#include <memory>
+#include "utils.h"
 
 // from own project: https://github.com/11x1/half-life-2-console-painter/blob/internal-dll/src/hooks/hooks.hh
 // apparently linux has no calltypes...?
@@ -99,3 +101,7 @@ namespace VirtualMethodHelper {
         return vtbl[ index ];
     }
 };
+
+// worth to look into:
+// https://github.com/lcsig/API-Hooking/blob/master/Ring%203/Trampoline%20Hook%20x64/Trampoline%20Hook%20x64/Trampoline_X64.cpp
+// https://github.com/haxo-games/TrampHook

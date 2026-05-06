@@ -5,8 +5,11 @@ typedef unsigned char byte;
 typedef float float32_t;
 typedef double float64_t;
 
-class QAngle {
-public:
+struct QAngle {
+    float x, y, z;
+};
+
+struct Vector {
     float x, y, z;
 };
 

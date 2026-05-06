@@ -7,6 +7,7 @@
 #include "game_functions.h"
 #include "game_interfaces.h"
 #include "CBasePlayer__ProcessUserCmds.h"
+#include "CBasePlayer__PlayerRunCommand.h"
 #include "player_hooks.h"
 
 void HookClient( int client ) {
@@ -40,6 +41,7 @@ void HookClient( int client ) {
 
     // switch ProcessUsercmds to our hook
     g_PlayerHookManager.HookPlayer( client, player, CBasePlayer_ProcessUsercmds_index, (uintptr_t)VFuncHooks::ProcessUsercmds::hook );
+    g_PlayerHookManager.HookPlayer( client, player, CBasePlayer_PlayerRunCommand_index, (uintptr_t)VFuncHooks::PlayerRunCommand::hook );
 }
 
 // todo: could be cleaned up as function above needs playebase aswell
@@ -129,13 +131,6 @@ void CHookHelper::OnClientDisconnected( int client ) {
     print_ext_scoped( "client %d disconnected\n", client );
 
     UnhookClient( client );
-}
-
-void CHookHelper::OnProcessUsercmds_Post( void* plr, CUserCmd* cmd, int numcmds, int totalcmds, int dropped_packets, bool paused ) {
-    print_ext_scoped(
-        "OnProcessUsercmds_Post | numcmds=%d, totalcmds=%d, dropped_packets=%d, paused=%d cmdnum=%d\n",
-        numcmds, totalcmds, dropped_packets, paused, cmd->command_number
-    );
 }
 
 SMEXT_LINK(&g_HookHelper);

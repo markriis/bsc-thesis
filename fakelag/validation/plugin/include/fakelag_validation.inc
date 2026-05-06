@@ -14,3 +14,4 @@ public Extension __ext_fakelag_validation =
     required = 0,
 #endif
 };
+

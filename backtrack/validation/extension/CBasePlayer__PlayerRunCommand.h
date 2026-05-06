@@ -47,6 +47,7 @@ DEFINE_VFTABLE_HOOK(
     */
 
 
+    /*
     // * is the player trying to attack?
     bool attacking = ( cmd->buttons & IN_ATTACK ) != 0;
     // todo: needs to check if can fire , maybe move to CLagCompensationManager::BacktrackPlayer
@@ -82,6 +83,7 @@ DEFINE_VFTABLE_HOOK(
         
         
     }
+        */
     
 
     auto original = g_PlayerHookManager.GetOriginal< def >( CBasePlayer_PlayerRunCommand_index );

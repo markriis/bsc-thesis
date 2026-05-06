@@ -7,6 +7,7 @@
 #include "game_functions.h"
 #include "game_interfaces.h"
 #include "CBasePlayer__PlayerRunCommand.h"
+#include "CLagCompensationManager__hooks.h"
 #include "player_hooks.h"
 
 void HookClient( int client ) {
@@ -84,10 +85,14 @@ void CHookHelper::SDK_OnAllLoaded( ) {
     GameFunctions::GetContainingEntity = ( GameFunctions::GetContainingEntity_t )( server_base + GetContainingEntity_offset );
     GameInterfaces::g_pGlobals = *( CGlobalVars** )( server_base + CGlobalVars_offset );
     GameInterfaces::g_pEngineServer = *( CEngineServer** )( server_base + CEngineServer_offset );
+    // todo: maybe double deref, changed before i went to coffee
+    GameInterfaces::g_pLagCompensationManager = *( CLagCompensationManager** )( server_base + CLagCompensationManager_offset );
 
     print_ext_scoped( "game specific offsets initialized\n" );
     print_ext_scoped( "\t GetContainingEntity: %p\n", (void*)GameFunctions::GetContainingEntity );
     print_ext_scoped( "\t CGlobalVars: %p\n", (void*)GameInterfaces::g_pGlobals );
+    print_ext_scoped( "\t CEngineServer: %p\n", (void*)GameInterfaces::g_pEngineServer );
+    print_ext_scoped( "\t CLagCompensationManager: %p\n", (void*)GameInterfaces::g_pLagCompensationManager );
 
     playerhelpers->AddClientListener( this );
 
@@ -98,6 +103,17 @@ void CHookHelper::SDK_OnAllLoaded( ) {
             HookClient( i );
         }
     }
+
+    // hook lc
+    VFuncHooks::CLagCompensationManager__StartLagCompensation::original = 
+        (VFuncHooks::CLagCompensationManager__StartLagCompensation::def)
+        VirtualMethodHelper::Hook(
+            *(uintptr_t**)GameInterfaces::g_pLagCompensationManager,
+            0,
+            (uintptr_t)VFuncHooks::CLagCompensationManager__StartLagCompensation::hook
+        );
+    
+    print_ext_scoped( "hooks initialized\n" );
 }
 
 void CHookHelper::SDK_OnUnload( ) {

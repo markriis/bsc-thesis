@@ -249,9 +249,20 @@ struct CEngineServer;
 
 struct CEngineServer_vft {
   void *fun_0x00[20];
-  INetChannelInfo *(*GetPlayerNetInfo)(CEngineServer *, int index);
+  INetChannelInfo *(*GetPlayerNetInfo)(CEngineServer *, int32_t index);
 };
 
 struct CEngineServer {
   CEngineServer_vft *vft;
+};
+
+struct CLagCompensationManager;
+
+struct CLagCompensationManager_vft {
+  void (*StartLagCompensation)(CLagCompensationManager *, uintptr_t *plr, CUserCmd *cmd);
+  void *fun_0x08[20];
+};
+
+struct CLagCompensationManager {
+  CLagCompensationManager_vft *vft;
 };

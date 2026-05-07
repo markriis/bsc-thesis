@@ -40,12 +40,10 @@
 #include "smsdk_ext.h"
 #include "sdk_defines.h"
 
-void HookClient( int client );
-
 // extension class
 // SDKExtension -> default extension interface, must be inherited
 // IClientListener -> interface for client connection events, used to hook player class methods
-class CHookHelper : public SDKExtension, public IClientListener
+class CHookHelper : public SDKExtension
 {
 public:
 	// called after the initial loading sequence has been processed, true -> load successfully
@@ -56,11 +54,6 @@ public:
 
 	// called once all known extensions have been loaded
 	void SDK_OnAllLoaded() override;
-
-	// called when client connected
-	void OnClientPutInServer( int client ) override;
-	// aand when dc
-	void OnClientDisconnected( int client ) override;
 
 	/**
 	 * @brief Called when the pause state is changed.

@@ -13,12 +13,8 @@
 */
 #define CBasePlayer_PlayerRunCommand_index 432
 
-#define GetContainingEntity_offset          0x983450
-
 #define CGlobalVars_offset                  0x1BD86A0
 #define CEngineServer_offset                0x1BD8998
 #define CLagCompensationManager_offset      0x1B14670
-
-#define UTIL_GetPlayerConnectionInfo_offset 0xAFD010
 
 #define CLagCompensationManager__StartLagCompensation__index  23

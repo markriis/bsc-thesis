@@ -3,7 +3,7 @@
 // * contains reversed sdk structs and defines
 // *   used for hooking and interfacing with the game
 // *   types commented with SDK-<path>/SDK-end are from the source sdk
-// *   and haven't been verified 
+// *   and haven't been verified by decomp 
 
 // SDK-game/shared/in_buttons.h
 #define IN_ATTACK		(1 << 0)
@@ -68,7 +68,9 @@ struct CUtlVector
   uint8_t *m_pElements;
 };
 
-
+struct Vector {
+    float x, y, z;
+};
 
 struct QAngle {
     float x, y, z;

@@ -43,7 +43,7 @@
 // extension class
 // SDKExtension -> default extension interface, must be inherited
 // IClientListener -> interface for client connection events, used to hook player class methods
-class CHookHelper : public SDKExtension
+class CHookHelper : public SDKExtension, IClientListener
 {
 public:
 	// called after the initial loading sequence has been processed, true -> load successfully
@@ -54,6 +54,9 @@ public:
 
 	// called once all known extensions have been loaded
 	void SDK_OnAllLoaded() override;
+
+	void OnClientPutInServer( int ) override;
+	void OnClientDisconnected( int ) override;
 
 	/**
 	 * @brief Called when the pause state is changed.

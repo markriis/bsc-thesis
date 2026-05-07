@@ -17,4 +17,6 @@
 #define CEngineServer_offset                0x1BD8998
 #define CLagCompensationManager_offset      0x1B14670
 
+#define GetContainingEntity_offset          0x983450
+
 #define CLagCompensationManager__StartLagCompensation__index  23

@@ -32,7 +32,7 @@ bachelors-thesis/
         configure.py
 
       plugin/
-        thesis-<exploit-name>-mitigation.sp
+        thesis-<exploit-name>-mitigator.sp
         include/
           <exploit-name>_validation.inc
 

@@ -1,0 +1,40 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/riis/src/alliedmodders/sourcemod/public",
+                "/home/riis/src/alliedmodders/sourcemod/public/extensions",
+                "/home/riis/src/alliedmodders/sourcemod/sourcepawn/include",
+
+                // * apparently fixes missing types for extension
+                "/home/riis/src/alliedmodders/sourcemod/public/amtl",
+                "/home/riis/src/alliedmodders/sourcemod/public/amtl/amtl",
+
+                "/home/riis/src/alliedmodders/mmsource/core",
+                "/home/riis/src/alliedmodders/mmsource/core/sourcehook",
+                "/home/riis/src/alliedmodders/hl2sdk-tf2/game/shared",
+                "/home/riis/src/alliedmodders/hl2sdk-tf2/public/vstdlib",
+                "/home/riis/src/alliedmodders/hl2sdk-tf2/public/tier0",
+                "/home/riis/src/alliedmodders/hl2sdk-tf2/public/tier1",
+                "/home/riis/src/alliedmodders/hl2sdk-tf2/public/engine",
+                "/home/riis/src/alliedmodders/hl2sdk-tf2/public"
+            ],
+            "defines": [
+                "_LINUX",
+                "LINUX",
+                "POSIX",
+                "SOURCEMOD_BUILD",
+                "SOURCE_ENGINE=12",
+                "SE_TF2=12",
+                "TF_DLL"
+            ],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

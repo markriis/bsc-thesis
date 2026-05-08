@@ -1,0 +1,4 @@
+[ ] per-player vfunc hook logic
+- [ ] currently overriding each player's vft
+- [ ] ProcessUserCmds doesn't save original due to hook setup
+[ ] autoload

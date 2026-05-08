@@ -1,0 +1,107 @@
+#pragma once
+
+#include <cstdint>
+#include <cstddef>
+#include <sys/mman.h>
+#include <memory>
+#include "utils.h"
+
+// from own project: https://github.com/11x1/half-life-2-console-painter/blob/internal-dll/src/hooks/hooks.hh
+// apparently linux has no calltypes...?
+// modified heavily, as now a global player hook manager manages hooking & unhooking
+// macro is only used for defining 
+#define DEFINE_VFTABLE_HOOK( hook_name, return_type, ... ) \
+namespace VFuncHooks { \
+    namespace hook_name { \
+        using def = return_type (  * )( __VA_ARGS__ ); \
+        inline def original { nullptr };\
+        return_type hook( __VA_ARGS__ );\
+    } \
+} \
+return_type VFuncHooks::hook_name::hook( __VA_ARGS__ )
+
+
+// codex start
+static bool MakeWritable(void *addr)
+{
+    const long pageSize = sysconf(_SC_PAGESIZE);
+    const uintptr_t page = reinterpret_cast<uintptr_t>(addr) & ~(static_cast<uintptr_t>(pageSize) - 1);
+
+    if (mprotect(reinterpret_cast<void *>(page), pageSize, PROT_READ | PROT_WRITE) != 0) {
+        print_ext("mprotect RW failed addr=%p page=%p errno=%d (%s)",
+            addr, reinterpret_cast<void *>(page), errno, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
+static bool MakeReadOnly(void *addr)
+{
+    const long pageSize = sysconf(_SC_PAGESIZE);
+    const uintptr_t page = reinterpret_cast<uintptr_t>(addr) & ~(static_cast<uintptr_t>(pageSize) - 1);
+
+    if (mprotect(reinterpret_cast<void *>(page), pageSize, PROT_READ) != 0) {
+        print_ext("mprotect R failed addr=%p page=%p errno=%d (%s)",
+            addr, reinterpret_cast<void *>(page), errno, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+// codex end
+
+namespace VirtualMethodHelper {
+    static uintptr_t Hook( uintptr_t* vtbl, int index, uintptr_t func ) {
+        void* slot = &vtbl[ index ];
+        auto original_fn = vtbl[ index ];
+
+        // codex start
+        print_ext( "Hooking slot #%d at %p (original=%p) with %p\n", index, slot, (void*)original_fn, (void*)func );
+        if ( !MakeWritable( slot ) ) {
+            print_ext( "Failed to make slot writable, aborting hook\n" );
+            return 0;
+        }
+
+        vtbl[ index ] = func;
+
+        if ( !MakeReadOnly( slot ) ) {
+            print_ext( "Failed to make slot read-only after hooking\n" );
+        }
+        // codex end
+
+        // mprotect( &m_vtbl[ m_index ], sizeof( uintptr_t ), PROT_READ | PROT_WRITE );
+        // m_vtbl[ m_index ] = func;
+        // mprotect( &m_vtbl[ m_index ], sizeof( uintptr_t ), PROT_READ );
+        return original_fn;
+    }
+
+    void Unhook( uintptr_t* vtbl, int index, uintptr_t original ) {
+        // codex start
+        void* slot = &vtbl[ index ];
+        print_ext( "Unhooking slot #%d at %p, restoring original %p\n", index, slot, (void*)original );
+        if ( !MakeWritable( slot ) ) {
+            print_ext( "Failed to make slot writable, aborting unhook\n" );
+            return;
+        }
+        
+        vtbl[ index ] = original;
+
+        if ( !MakeReadOnly( slot ) ) {
+            print_ext( "Failed to make slot read-only after unhooking\n" );
+        }
+        // codex end
+
+        // mprotect( &m_vtbl[ m_index ], sizeof( uintptr_t ), PROT_READ | PROT_WRITE );
+        // m_vtbl[ m_index ] = m_original;
+        // mprotect( &m_vtbl[ m_index ], sizeof( uintptr_t ), PROT_READ );
+    }
+
+    uintptr_t GetVtblMethodAddress( uintptr_t* vtbl, int index ) {
+        return vtbl[ index ];
+    }
+};
+
+// worth to look into:
+// https://github.com/lcsig/API-Hooking/blob/master/Ring%203/Trampoline%20Hook%20x64/Trampoline%20Hook%20x64/Trampoline_X64.cpp
+// https://github.com/haxo-games/TrampHook

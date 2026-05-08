@@ -45,7 +45,7 @@ DEFINE_VFTABLE_HOOK(
 
         if ( prev_cmd_tickcount > cmd->tick_count ) {
             print_ext(
-                "(detection) lag compensation tick count went backwards for player %d! prev=%d cmd=%d cur=%d delta=%d\n",
+                "(mismatch) lagcomp tick count went backwards for player %d! prev=%d cmd=%d cur=%d delta=%d\n",
                 plr_index,
                 prev_cmd_tickcount, cmd->tick_count,
                 cached_cur_cmd_tickcount,

@@ -6,9 +6,10 @@
 #include "offsets.h"
 #include "game_interfaces.h"
 #include "game_functions.h"
-#include "CBasePlayer__PlayerRunCommand.h"
-#include "CLagCompensationManager__hooks.h"
 #include "player_hooks.h"
+
+#include "CBasePlayer__PlayerRunCommand.h"
+#include "CLagCompensationManager__StartLagCompensation.h"
 
 uintptr_t GetCBasePlayerFromClient( int client ) {
     IGamePlayer* gamePlayer = playerhelpers->GetGamePlayer( client );
@@ -73,41 +74,38 @@ void CHookHelper::SDK_OnAllLoaded( ) {
     GameFunctions::GetContainingEntity = (GameFunctions::GetContainingEntity_t)( server_base + GetContainingEntity_offset );
 
     print_ext_scoped( "game specific offsets initialized\n" );
-    print_ext_scoped( "\t CGlobalVars: %p\n", (void*)GameInterfaces::g_pGlobals );
-    print_ext_scoped( "\t CEngineServer: %p\n", (void*)GameInterfaces::g_pEngineServer );
-    print_ext_scoped( "\t CLagCompensationManager: %p\n", (void*)GameInterfaces::g_pLagCompensationManager );
 
+    // hook lc
+    VFuncHooks::StartLagCompensation::original = 
+        (VFuncHooks::StartLagCompensation::def)
+        VirtualMethodHelper::Hook(
+            *(uintptr_t**)GameInterfaces::g_pLagCompensationManager,
+            0,
+            (uintptr_t)VFuncHooks::StartLagCompensation::hook
+        );
+    
     // hook connected clients
     playerhelpers->AddClientListener( this );
     if ( playerhelpers->IsServerActivated( ) ) {
         for ( int i = 1; i <= playerhelpers->GetMaxClients( ); i++ )
             HookClient( i );
     }
-
-    // hook lc
-    VFuncHooks::CLagCompensationManager__StartLagCompensation::original = 
-        (VFuncHooks::CLagCompensationManager__StartLagCompensation::def)
-        VirtualMethodHelper::Hook(
-            *(uintptr_t**)GameInterfaces::g_pLagCompensationManager,
-            0,
-            (uintptr_t)VFuncHooks::CLagCompensationManager__StartLagCompensation::hook
-        );
     
     print_ext_scoped( "hooks initialized\n" );
 }
 
-// todo: well something goes wrong here, upon unloading the extension
-// *     core gets dumped, #uncool
 void CHookHelper::SDK_OnUnload( ) {
-    VirtualMethodHelper::Unhook( *(uintptr_t**)GameInterfaces::g_pLagCompensationManager, 0, (uintptr_t)VFuncHooks::CLagCompensationManager__StartLagCompensation::original );
-    print_ext_scoped( "lc hook released\n" );
+    VirtualMethodHelper::Unhook( *(uintptr_t**)GameInterfaces::g_pLagCompensationManager, 0, (uintptr_t)VFuncHooks::StartLagCompensation::original );
 
-    playerhelpers->AddClientListener( this );
+    playerhelpers->RemoveClientListener( this );
+
+    // * unhook connected clients
     if ( playerhelpers->IsServerActivated( ) ) {
         for ( int i = 1; i <= playerhelpers->GetMaxClients( ); i++ )
             UnhookClient( i );
     }
-    print_ext_scoped( "client hooks released\n" );
+
+    print_ext_scoped( "hooks released\n" );
 }
 
 bool CHookHelper::SDK_OnLoad( char* error, size_t maxlen, bool late ) {
@@ -116,14 +114,10 @@ bool CHookHelper::SDK_OnLoad( char* error, size_t maxlen, bool late ) {
 }
 
 void CHookHelper::OnClientPutInServer( int client ) {
-    print_ext_scoped( "client %d put in server\n", client );
-
     HookClient( client );
 }
 
 void CHookHelper::OnClientDisconnected( int client ) {
-    print_ext_scoped( "client %d disconnected\n", client );
-
     UnhookClient( client );
 }
 

@@ -6,7 +6,7 @@
 #include "offsets.h"
 #include "game_functions.h"
 #include "game_interfaces.h"
-#include "CBasePlayer__PlayerRunCommand.h"
+#include "CBasePlayer__ProcessUsercmds.h"
 #include "player_hooks.h"
 
 uintptr_t GetCBasePlayerFromClient( int client ) {
@@ -38,8 +38,7 @@ void HookClient( int client ) {
 
     print_ext_scoped( "got player base ptr %p for client %d\n", (void*)player, client );
 
-    // switch ProcessUsercmds to our hook
-    g_PlayerHookManager.HookPlayer( client, player, CBasePlayer_PlayerRunCommand_index, (uintptr_t)VFuncHooks::PlayerRunCommand::hook );
+    g_PlayerHookManager.HookPlayer( client, player, CBasePlayer_ProcessUsercmds_index, (uintptr_t)VFuncHooks::ProcessUsercmds::hook );
 }
 
 void UnhookClient( int client ) {

@@ -11,6 +11,7 @@
 
 *   needed to see what commands the server runs
 */
+#define CBasePlayer_ProcessUsercmds_index  431
 #define CBasePlayer_PlayerRunCommand_index 432
 
 #define GetContainingEntity_offset          0x983450

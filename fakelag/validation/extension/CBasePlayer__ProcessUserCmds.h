@@ -31,7 +31,7 @@ but in CServerGameClients::ProcessUsercmds decomp it gets called as:
 DEFINE_VFTABLE_HOOK(
     ProcessUsercmds,
     void,
-    void* thisptr, CUserCmd* cmd, int numcmds, int totalcmds, int dropped_packets, bool paused
+    void* thisptr, CUserCmd* cmds, int numcmds, int totalcmds, int dropped_packets, bool paused
 ) {
     // last solution didn't assign original as hook structure was different
     // originals for players are now stored under PlayerHookManager, so get original from there and call it if exists
@@ -39,11 +39,10 @@ DEFINE_VFTABLE_HOOK(
     auto original = g_PlayerHookManager.GetOriginal< def >( CBasePlayer_ProcessUsercmds_index );
 
     if ( original )
-        original( thisptr, cmd, numcmds, totalcmds, dropped_packets, paused );
-
+        original( thisptr, cmds, numcmds, totalcmds, dropped_packets, paused );
 
     print_ext_scoped(
-        "OnProcessUsercmds_Post | numcmds=%d, totalcmds=%d, dropped_packets=%d, paused=%d cmdnum=%d\n",
-        numcmds, totalcmds, dropped_packets, paused, cmd->command_number
+        "OnProcessUsercmds_Post | numcmds=%d, totalcmds=%d, dropped_packets=%d, paused=%d\n",
+        numcmds, totalcmds, dropped_packets, paused
     );
 };

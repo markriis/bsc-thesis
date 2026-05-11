@@ -40,7 +40,7 @@ DEFINE_VFTABLE_HOOK(
         // *   but since server simulates players on an interval tickcount should be fine?
         // *   otherwise could also use simtime or some other global var (frametime/curtime)
         if ( info.last_update_time != tickcount ) {
-            info.last_update_time = tickcount;
+            auto time_delta = tickcount - info.last_update_time;
 
             auto pos_diff = Vector{
                 pos.x - info.start_pos.x,
@@ -60,10 +60,14 @@ DEFINE_VFTABLE_HOOK(
                 cmd_fmt += std::to_string( simulated_cmd.command_number );
             }
 
-            print_ext_scoped( "OnPlayerRunCommand | (new tick) simulated %d cmds since last run, player moved %.2f hu\n\t%s", info.cmds_simulated.size( ), diff_dist, cmd_fmt.c_str() );
+            print_ext_scoped( "OnPlayerRunCommand | (new tick) simulated %d cmds in %d ticks, player moved %.2f hu\n\t%s", info.cmds_simulated.size( ), time_delta, diff_dist, cmd_fmt.c_str() );
             
 
             // * and clear cached cmds
+            info.last_update_time = tickcount;
+            info.start_pos.x = pos.x;
+            info.start_pos.y = pos.y;
+            info.start_pos.z = pos.z;
             info.cmds_simulated.clear( );
         }
 

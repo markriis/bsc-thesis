@@ -6,31 +6,31 @@
 #include "offsets.h"
 #include "game_functions.h"
 #include "game_interfaces.h"
-// #include "CBasePlayer__ProcessUserCmds.h"
-#include "CBasePlayer__PlayerRunCommand.h"
+#include "CBasePlayer__ProcessUsercmds.h"
 #include "player_hooks.h"
+#include "detection.h"
 
-void HookClient( int client ) {
+uintptr_t GetCBasePlayerFromClient( int client ) {
     IGamePlayer* gamePlayer = playerhelpers->GetGamePlayer( client );
 
-    // leave bots alone
-    if ( !gamePlayer || gamePlayer->IsFakeClient( ) ) return;
+    if ( !gamePlayer || gamePlayer->IsFakeClient( ) ) return 0;
 
-    // uhh is this actually needed
     if ( !gamePlayer->IsConnected( ) || !gamePlayer->IsInGame( ) ) {
-        print_ext_scoped( "client %d not connected, skipping hook\n", client );
-        return;
+        return 0;
     }
 
     edict_t* pPlayerEdict = gamePlayer ? gamePlayer->GetEdict() : nullptr;
 
-    if ( !pPlayerEdict ) {
-        print_ext_scoped( "failed to get edict for client %d\n", client );
-        return;
-    }
+    if ( !pPlayerEdict ) return 0;
 
     // get player base ptr
     uintptr_t player = (uintptr_t)GameFunctions::GetContainingEntity( pPlayerEdict );
+
+    return player;
+}
+
+void HookClient( int client ) {
+    uintptr_t player = GetCBasePlayerFromClient( client );
 
     if ( !player ) {
         print_ext_scoped( "failed to get player base ptr for client %d\n", client );
@@ -39,28 +39,15 @@ void HookClient( int client ) {
 
     print_ext_scoped( "got player base ptr %p for client %d\n", (void*)player, client );
 
+    // reset detection for this player
+    Detection::RemovePlayer( player );
+
     // switch ProcessUsercmds to our hook
-    // g_PlayerHookManager.HookPlayer( client, player, CBasePlayer_ProcessUsercmds_index, (uintptr_t)VFuncHooks::ProcessUsercmds::hook );
-    g_PlayerHookManager.HookPlayer( client, player, CBasePlayer_PlayerRunCommand_index, (uintptr_t)VFuncHooks::PlayerRunCommand::hook );
+    g_PlayerHookManager.HookPlayer( client, player, CBasePlayer_ProcessUsercmds_index, (uintptr_t)VFuncHooks::ProcessUsercmds::hook );
 }
 
-// todo: could be cleaned up as function above needs playebase aswell
 void UnhookClient( int client ) {
-    IGamePlayer* gamePlayer = playerhelpers->GetGamePlayer( client );
-    
-    // leave bots alone
-    // lol bots arent fake clients
-    if ( !gamePlayer || gamePlayer->IsFakeClient( ) ) return;
-
-    edict_t* pPlayerEdict = gamePlayer ? gamePlayer->GetEdict() : nullptr;
-
-    if ( !pPlayerEdict ) {
-        print_ext_scoped( "failed to get edict for client %d\n", client );
-        return;
-    }
-
-    // get player base ptr
-    uintptr_t player = (uintptr_t)GameFunctions::GetContainingEntity( pPlayerEdict );
+    uintptr_t player = GetCBasePlayerFromClient( client );
 
     if ( !player ) {
         print_ext_scoped( "failed to get player base ptr for client %d\n", client );
@@ -71,8 +58,7 @@ void UnhookClient( int client ) {
 }
 
 void CHookHelper::SDK_OnAllLoaded( ) {
-    // VirtualMethodHook hook( 0, 0 );
-    print_ext_scoped( "SDK_OnAllLoaded called, forward created\n" );
+    print_ext_scoped( "SDK_OnAllLoaded called\n" );
 
     auto server_base = ModuleHelper::FindModuleBase( "server_srv.so" );
 
@@ -95,7 +81,6 @@ void CHookHelper::SDK_OnAllLoaded( ) {
     // hook every player in server already
     if ( playerhelpers->IsServerActivated( ) ) {
         for ( int i = 1; i <= playerhelpers->GetMaxClients( ); i++ ) {
-            IGamePlayer* gamePlayer = playerhelpers->GetGamePlayer( i );
             HookClient( i );
         }
     }
@@ -104,10 +89,7 @@ void CHookHelper::SDK_OnAllLoaded( ) {
 void CHookHelper::SDK_OnUnload( ) {
     // unhook clients
     for ( int i = 1; i <= playerhelpers->GetMaxClients( ); i++ ) {
-        IGamePlayer* gamePlayer = playerhelpers->GetGamePlayer( i );
-        if ( gamePlayer && gamePlayer->IsConnected( ) && !gamePlayer->IsFakeClient( ) ) {
-            UnhookClient( i );
-        }
+        UnhookClient( i );
     }
 
     // unregister client listener

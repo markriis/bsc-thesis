@@ -20,3 +20,5 @@
 #define GetContainingEntity_offset          0x983450
 
 #define CGlobalVars_offset                  0x1BD86A0
+
+#define CBasePlayer_mVecAbsOrigin_offset    0x3C4 // 964

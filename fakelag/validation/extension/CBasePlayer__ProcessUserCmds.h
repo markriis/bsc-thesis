@@ -41,8 +41,8 @@ DEFINE_VFTABLE_HOOK(
     if ( original )
         original( thisptr, cmds, numcmds, totalcmds, dropped_packets, paused );
 
-    print_ext_scoped(
-        "OnProcessUsercmds_Post | numcmds=%d, totalcmds=%d, dropped_packets=%d, paused=%d\n",
-        numcmds, totalcmds, dropped_packets, paused
-    );
+    // print_ext_scoped(
+    //     "OnProcessUsercmds_Post | numcmds=%d, totalcmds=%d, dropped_packets=%d, paused=%d\n",
+    //     numcmds, totalcmds, dropped_packets, paused
+    // );
 };

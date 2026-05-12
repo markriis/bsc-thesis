@@ -27,10 +27,18 @@ DEFINE_VFTABLE_HOOK(
 ) {    
     auto tickcount = GameInterfaces::g_pGlobals->tickcount;
 
-    auto pos = *(Vector *)((char *)thisptr + 964);
+    // * inlined vector, 0x3C4, 0x3C8, 0x3CC for x,y,z respectively
+    auto pos_addr = ((char *)thisptr + CBasePlayer_mVecAbsOrigin_offset);
+    auto pos_x = *reinterpret_cast< float* >( pos_addr );
+    auto pos_y = *reinterpret_cast< float* >( pos_addr + 4 );
+    auto pos_z = *reinterpret_cast< float* >( pos_addr + 8 );
     
+
     if ( g_LastUpdateTimes.find( thisptr ) == g_LastUpdateTimes.end( ) ) {
-        g_LastUpdateTimes[ thisptr ] = run_command_player_info{ tickcount, { }, pos };
+        g_LastUpdateTimes[ thisptr ] = run_command_player_info{
+            tickcount, { },
+            Vector{ pos_x, pos_y, pos_z }
+        };
     } else {
         auto& info = g_LastUpdateTimes[ thisptr ];
 
@@ -43,9 +51,9 @@ DEFINE_VFTABLE_HOOK(
             auto time_delta = tickcount - info.last_update_time;
 
             auto pos_diff = Vector{
-                pos.x - info.start_pos.x,
-                pos.y - info.start_pos.y,
-                pos.z - info.start_pos.z
+                pos_x - info.start_pos.x,
+                pos_y - info.start_pos.y,
+                pos_z - info.start_pos.z
             };
 
             auto diff_dist = sqrtf( pos_diff.x * pos_diff.x + pos_diff.y * pos_diff.y + pos_diff.z * pos_diff.z );
@@ -64,13 +72,17 @@ DEFINE_VFTABLE_HOOK(
             
 
             // * and clear cached cmds
-            info.last_update_time = tickcount;
-            info.start_pos.x = pos.x;
-            info.start_pos.y = pos.y;
-            info.start_pos.z = pos.z;
             info.cmds_simulated.clear( );
-        }
 
+            // * update pos
+            info.start_pos.x = pos_x;
+            info.start_pos.y = pos_y;
+            info.start_pos.z = pos_z;
+
+            // * update last update time
+            info.last_update_time = tickcount;
+        }
+        
         // * push current cmd
         info.cmds_simulated.push_back( *cmd );
     }

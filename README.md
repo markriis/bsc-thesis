@@ -56,35 +56,42 @@ python3 -m venv ~/.venvs/ambuild
 ~/.venvs/ambuild/bin/python -m pip install ~/tools/ambuild
 
 # installing SDKs (dependencies listed in https://wiki.alliedmods.net/Writing_extensions#Manually_configuring_a_project)
-mkdir ~/src
-mkdir ~/src/alliedmodders
+mkdir -p ~/src/alliedmodders
+cd ~/src/alliedmodders
 
 git clone https://github.com/alliedmodders/hl2sdk-manifests.git
 git clone --recursive https://github.com/alliedmodders/sourcemod
 git clone https://github.com/alliedmodders/metamod-source.git mmsource
 git clone -b tf2 https://github.com/alliedmodders/hl2sdk.git hl2sdk-tf2
 
+cd ~/
+mkdir repo
+cd repo
+
 # example for creating a validation extension
 # SourceMod's sample_ext was used as a starting template
-cp -r ~/src/alliedmodders/sourcemod/public/sample_ext ~/src/<exploit-name>-validation
-cd ~/src/<exploit-name>-validation
-## remove unused dirs as development was done in VSCode
-rmdir msvc8 msvc9 msvc12
+mkdir -p ~/repo/<exploit-name>/validation
+cp -r ~/test/src/alliedmodders/sourcemod/public/sample_ext/. ~/test/repo/<exploit-name>/validation
+cd ~/repo/<exploit-name>/validation
+# remove unused dirs as development was done in VSCode
+rm -rf msvc12 msvc9 msvc10 msvc8
 mkdir build-linux
 cd build-linux
-## configuring project 
+# configuring project
+source ~/.venvs/ambuild/bin/activate
 python3 ../configure.py \
     --hl2sdk-root ~/src/alliedmodders \
     --hl2sdk-manifest-path ~/src/alliedmodders/hl2sdk-manifests \
     --sm-path ~/src/alliedmodders/sourcemod \
     --mms-path ~/src/alliedmodders/mmsource \
     --sdks tf2 --targets x86_64 --enable-debug
-# test build
-source ~/.venvs/ambuild/bin/activate
-ambuild
-# builds to build-linux/package/addons/sourcemod/extensions/x64/<exploit-name>-validation-plugin.ext.2.tf2.so
-```
 
+# test build
+ambuild
+# builds to ~/repo/<exploit-name>/validation/build-linux/<project-name.ext.2.tf2>/linux-x86_64/<project-name>.ext.2.tf2.so
+```
+project name can be configured in `~/repo/<exploit-name>/validation/extension/AMBuilder` under `projectName`  
+  
 Developing on VS Code required defined include paths & environment variables for intellisense, these were used:
 ```
 /home/riis/src/alliedmodders/sourcemod/public
